@@ -119,16 +119,20 @@ class PythonPlugin : Plugin<Project> {
             p = p.parent
         }
 
-        project.plugins.forEach { plugin ->
-            if (plugin.javaClass.name.contains(name, ignoreCase = true)) {
-                val version = project.pluginManager.plugins
-                    .find { it.javaClass.name.contains(name, ignoreCase = true) }
-                    ?.javaClass
-                    ?.getPackage()
-                    ?.implementationVersion ?: "UNKNOWN_VERSION"
+        val matchedPlugin = project.plugins.find { plugin ->
+            plugin.javaClass.name.contains(name, ignoreCase = true)
+        }
 
-                return PluginInfo(project.buildscript, version)
-            }
+        if (matchedPlugin != null) {
+            val version = matchedPlugin.javaClass
+                .`package`
+                ?.implementationVersion
+                ?: project.extensions.extraProperties
+                    .takeIf { it.has("plugin_$name.version") }
+                    ?.get("plugin_$name.version")?.toString()
+                ?: "UNKNOWN_VERSION"
+
+            return PluginInfo(project.buildscript, version)
         }
         throw GradleException("Failed to find plugin $group:$name")
     }
